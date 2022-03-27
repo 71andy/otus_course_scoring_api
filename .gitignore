@@ -1,0 +1,8 @@
+.venv
+.vscode
+example
+log
+reports
+**/*.ipynb
+**/__pycache__
+**/.DS_Store
