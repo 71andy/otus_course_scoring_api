@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from abc import ABC, abstractmethod
-from encodings import utf_8
-from itertools import chain
+# from abc import ABC, abstractmethod
+# from encodings import utf_8
+# from itertools import chain
 from datetime import datetime
 import json
 import logging
@@ -106,16 +106,10 @@ class CharField(GenericField):
     def __init__(self, required, nullable):
         super().__init__(required, nullable, str)
 
-    def validate(self, value):
-        super().validate(value)
-
 
 class ArgumentsField(GenericField):
     def __init__(self, required, nullable):
         super().__init__(required, nullable, dict)
-
-    def validate(self, value):
-        super().validate(value)
 
 
 class EmailField(CharField):
