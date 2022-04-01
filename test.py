@@ -36,12 +36,10 @@ class TestSuite(unittest.TestCase):
             msg = request.get("account", "") + request.get("login", "") + api.SALT
             request["token"] = hashlib.sha512(msg.encode("utf-8")).hexdigest()
 
-    # @unittest.skip("skip passed test")
     def test_empty_request(self):
         _, code = self.get_response({})
         self.assertEqual(api.INVALID_REQUEST, code)
 
-    # @unittest.skip("skip passed test")
     @cases(
         [
             {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "", "arguments": {}},
@@ -53,7 +51,6 @@ class TestSuite(unittest.TestCase):
         _, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
 
-    # @unittest.skip("skip passed test")
     @cases(
         [
             {"account": "horns&hoofs", "login": "h&f", "method": "online_score"},
@@ -67,7 +64,6 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(api.INVALID_REQUEST, code)
         self.assertTrue(len(response))
 
-    # @unittest.skip("skip passed test")
     @cases(
         [
             {},
@@ -91,7 +87,6 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(api.INVALID_REQUEST, code, arguments)
         self.assertTrue(len(response))
 
-    # @unittest.skip("skip passed test")
     @cases(
         [
             {"phone": "79175002040", "email": "stupnikov@otus.ru"},
@@ -112,7 +107,6 @@ class TestSuite(unittest.TestCase):
         self.assertTrue(isinstance(score, (int, float)) and score >= 0, arguments)
         self.assertEqual(sorted(self.context["has"]), sorted(arguments.keys()))
 
-    # @unittest.skip("skip passed test")
     def test_ok_score_admin_request(self):
         arguments = {"phone": "79175002040", "email": "stupnikov@otus.ru"}
         request = {"account": "horns&hoofs", "login": "admin", "method": "online_score", "arguments": arguments}
@@ -122,7 +116,6 @@ class TestSuite(unittest.TestCase):
         score = response.get("score")
         self.assertEqual(score, 42)
 
-    # @unittest.skip("temporary skip test")
     @cases(
         [
             {},
@@ -140,7 +133,6 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(api.INVALID_REQUEST, code, arguments)
         self.assertTrue(len(response))
 
-    # @unittest.skip("temporary skip test")
     @cases(
         [
             {"client_ids": [1, 2, 3], "date": datetime.datetime.today().strftime("%d.%m.%Y")},
