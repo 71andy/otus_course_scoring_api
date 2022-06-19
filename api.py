@@ -113,9 +113,6 @@ class ArgumentsField(GenericField):
 
 
 class EmailField(CharField):
-    def __init__(self, required, nullable):
-        super().__init__(required, nullable)
-
     def validate(self, value):
         super().validate(value)
         if "@" not in value:
@@ -134,9 +131,6 @@ class PhoneField(GenericField):
 
 
 class DateField(CharField):
-    def __init__(self, required, nullable):
-        super().__init__(required, nullable)
-
     def validate(self, value):
         super().validate(value)
         try:
@@ -148,9 +142,6 @@ class DateField(CharField):
 
 
 class BirthDayField(DateField):
-    def __init__(self, required, nullable):
-        super().__init__(required, nullable)
-
     def validate(self, value):
         super().validate(value)
         # Проверка на возраст не более 70 лет
