@@ -183,14 +183,14 @@ class Meta(type):
 
 
 class GenericRequest(metaclass=Meta):
-    def __init__(self, request):
+    def __init__(self, request_args):
         """Return an error string if the request is invalid, None otherwise"""
-        self._error = ""  # Строка ошибок формата запросе. Останется пустой, если нет ошибок
+        self._error = ""  # Строка ошибок формата запроса. Останется пустой, если нет ошибок
         # Попытаться установить все поля. Если поля нет в запросе, установить его в None.
         # Для обязательных параметров установка в None вызовет исключение
         for name in self._fields:
             try:
-                setattr(self, name, request[name] if name in request else None)
+                setattr(self, name, request_args[name] if name in request_args else None)
             except (TypeError, ValueError) as e:
                 if self._error:
                     self._error += ", "
@@ -245,7 +245,13 @@ class OnlineScoreRequest(GenericRequest):
         ctx.update({"has": [field for field in self._fields.keys() if getattr(self, field) is not None]})
 
         score = scoring.get_score(
-            store, phone=self.phone, email=self.email, birthday=self.birthday, gender=self.gender, first_name=self.first_name, last_name=self.last_name
+            store,
+            phone=self.phone,
+            email=self.email,
+            birthday=self.birthday,
+            gender=self.gender,
+            first_name=self.first_name,
+            last_name=self.last_name,
         )
         return {"score": 42 if self.is_admin else score}
 
@@ -348,7 +354,12 @@ if __name__ == "__main__":
     op.add_option("-p", "--port", action="store", type=int, default=8080)
     op.add_option("-l", "--log", action="store", default=None)
     (opts, args) = op.parse_args()
-    logging.basicConfig(filename=opts.log, level=logging.INFO, format="[%(asctime)s] %(levelname).1s %(message)s", datefmt="%Y.%m.%d %H:%M:%S")
+    logging.basicConfig(
+        filename=opts.log,
+        level=logging.INFO,
+        format="[%(asctime)s] %(levelname).1s %(message)s",
+        datefmt="%Y.%m.%d %H:%M:%S",
+    )
     server = HTTPServer(("localhost", opts.port), MainHTTPHandler)
     logging.info("Starting server at %s" % opts.port)
     try:
