@@ -184,17 +184,23 @@ class Meta(type):
 
 class GenericRequest(metaclass=Meta):
     def __init__(self, request_args):
-        """Return an error string if the request is invalid, None otherwise"""
-        self._error = ""  # Строка ошибок формата запроса. Останется пустой, если нет ошибок
+        """error string if the request is invalid, None otherwise"""
+        self._request_args = request_args
+        self._error = "validation has not been made yet"
+
+    def is_valid(self):
         # Попытаться установить все поля. Если поля нет в запросе, установить его в None.
         # Для обязательных параметров установка в None вызовет исключение
+        self._error = ""
         for name in self._fields:
             try:
-                setattr(self, name, request_args[name] if name in request_args else None)
+                setattr(self, name, self._request_args[name] if name in self._request_args else None)
             except (TypeError, ValueError) as e:
                 if self._error:
                     self._error += ", "
                 self._error += str(e)
+
+        return len(self._error) == 0
 
     def get_err(self):
         """Return error string, empty string if request is"""
@@ -227,18 +233,24 @@ class OnlineScoreRequest(GenericRequest):
 
     def __init__(self, method_reqest):
         super().__init__(method_reqest.arguments)
-        if not self._error:
-            # Дополнительная проверка на наличие пар значений
-            if self.first_name and self.last_name:
-                pass
-            elif self.phone and self.email:
-                pass
-            elif self.birthday and self.gender is not None:
-                pass
-            else:
-                self._error = "Any pair of phone/email, first_name/last_name, gender/birthday was not found"
-
         self.is_admin = method_reqest.is_admin
+
+    def is_valid(self):
+        if not super().is_valid():
+            return False
+
+        # Дополнительная проверка на наличие пар значений
+        if self.first_name and self.last_name:
+            pass
+        elif self.phone and self.email:
+            pass
+        elif self.birthday and self.gender is not None:
+            pass
+        else:
+            self._error = "Any pair of phone/email, first_name/last_name, gender/birthday was not found"
+            return False
+
+        return True
 
     def get_response(self, ctx, store):
 
@@ -289,7 +301,7 @@ def method_handler(request, ctx, store):
         return "Empty request is not allowed", INVALID_REQUEST
 
     req = MethodRequest(request["body"])
-    if req.get_err():
+    if not req.is_valid():
         return req.get_err(), INVALID_REQUEST
 
     if not check_auth(req):
@@ -299,7 +311,7 @@ def method_handler(request, ctx, store):
         return f"Method {req.method} is invalid", INVALID_REQUEST
 
     method = METHODS[req.method](req)
-    if method.get_err():
+    if not method.is_valid():
         return method.get_err(), INVALID_REQUEST
 
     response = method.get_response(ctx, store)
