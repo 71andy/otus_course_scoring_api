@@ -177,8 +177,19 @@ class Meta(type):
     """Метакласс собирает в словарь '_fields' все атрибуты класса, наследованные от GenericField"""
 
     def __new__(cls, name, bases, namespace):
+        # Also ensure initialization is only performed for subclasses of Meta
+        # (excluding Meta class itself).
+        parents = [b for b in bases if isinstance(b, Meta)]
+        if not parents:
+            return super().__new__(cls, name, bases, namespace)
+
+        # При наследовании классов забрать в дочерний класс все поля из базового
+        base_fields_gen = (b._fields for b in bases if isinstance(b, Meta) and hasattr(b, "_fields"))
+        base_fields = {}
+        for f in base_fields_gen:
+            base_fields = {**base_fields, **f}
         fields = {name: field for name, field in namespace.items() if isinstance(field, GenericField)}
-        namespace["_fields"] = fields
+        namespace["_fields"] = {**fields, **base_fields}
         return super().__new__(cls, name, bases, namespace)
 
 
@@ -214,6 +225,8 @@ class ClientsInterestsRequest(GenericRequest):
     client_ids = ClientIDsField(required=True)
     date = DateField(required=False, nullable=True)
 
+
+class ClientsInterestsMethod(ClientsInterestsRequest):
     def __init__(self, method_reqest):
         super().__init__(method_reqest.arguments)
 
@@ -230,10 +243,6 @@ class OnlineScoreRequest(GenericRequest):
     phone = PhoneField(required=False, nullable=True)
     birthday = BirthDayField(required=False, nullable=True)
     gender = GenderField(required=False, nullable=True)
-
-    def __init__(self, method_reqest):
-        super().__init__(method_reqest.arguments)
-        self.is_admin = method_reqest.is_admin
 
     def is_valid(self):
         if not super().is_valid():
@@ -252,6 +261,12 @@ class OnlineScoreRequest(GenericRequest):
 
         return True
 
+
+class OnlineScoreMethod(OnlineScoreRequest):
+    def __init__(self, method_reqest):
+        super().__init__(method_reqest.arguments)
+        self.is_admin = method_reqest.is_admin
+
     def get_response(self, ctx, store):
 
         ctx.update({"has": [field for field in self._fields.keys() if getattr(self, field) is not None]})
@@ -268,7 +283,7 @@ class OnlineScoreRequest(GenericRequest):
         return {"score": 42 if self.is_admin else score}
 
 
-METHODS = {"online_score": OnlineScoreRequest, "clients_interests": ClientsInterestsRequest}
+METHODS = {"online_score": OnlineScoreMethod, "clients_interests": ClientsInterestsMethod}
 
 
 class MethodRequest(GenericRequest):
