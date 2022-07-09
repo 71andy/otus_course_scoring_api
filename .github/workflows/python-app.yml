@@ -23,12 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install black
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Lint with black
-        uses: psf/black@stable
-        with:
-          options: '--check --verbose --line-length=160'
-          # src: './src'
-          # version: "21.5b1"
+      - name: Lint with PyCodeSlyle
+        run: |
+          pycodestyle --first --verbose --max-line-length=160 .
       - name: Test
         run: |
           python test.py
