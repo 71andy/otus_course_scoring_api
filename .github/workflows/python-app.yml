@@ -25,7 +25,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Lint with PyCodeSlyle
         run: |
-          pycodestyle --first --verbose --max-line-length=160 .
+          pycodestyle --first --verbose --max-line-length=120 --ignore=E722 .
       - name: Test
         run: |
           python test.py
