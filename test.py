@@ -1,9 +1,13 @@
 import hashlib
 import datetime
 import functools
+import json
+import time
 import unittest
+from unittest import mock
 
 import api
+from store import Store
 
 
 def cases(cases):
@@ -12,7 +16,10 @@ def cases(cases):
         def wrapper(*args):
             for c in cases:
                 new_args = args + (c if isinstance(c, tuple) else (c,))
-                f(*new_args)
+                try:
+                    f(*new_args)
+                except Exception as e:
+                    raise type(e)(str(e) + ' is test case: %s' % c)
 
         return wrapper
 
@@ -23,10 +30,10 @@ class TestSuite(unittest.TestCase):
     def setUp(self):
         self.context = {}
         self.headers = {}
-        self.settings = {}
+        self.store = Store()
 
     def get_response(self, request):
-        return api.method_handler({"body": request, "headers": self.headers}, self.context, self.settings)
+        return api.method_handler({"body": request, "headers": self.headers}, self.context, self.store)
 
     def set_valid_auth(self, request):
         if request.get("login") == api.ADMIN_LOGIN:
@@ -74,8 +81,21 @@ class TestSuite(unittest.TestCase):
             {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": "1"},
             {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "01.01.1890"},
             {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "XXX"},
-            {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "01.01.2000", "first_name": 1},
-            {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "01.01.2000", "first_name": "s", "last_name": 2},
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": 1,
+                "birthday": "01.01.2000",
+                "first_name": 1,
+            },
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": 1,
+                "birthday": "01.01.2000",
+                "first_name": "s",
+                "last_name": 2,
+            },
             {"phone": "79175002040", "birthday": "01.01.2000", "first_name": "s"},
             {"email": "stupnikov@otus.ru", "gender": 1, "last_name": 2},
         ]
@@ -95,7 +115,14 @@ class TestSuite(unittest.TestCase):
             {"gender": 0, "birthday": "01.01.2000"},
             {"gender": 2, "birthday": "01.01.2000"},
             {"first_name": "a", "last_name": "b"},
-            {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": 1,
+                "birthday": "01.01.2000",
+                "first_name": "a",
+                "last_name": "b",
+            },
         ]
     )
     def test_ok_score_request(self, arguments):
@@ -140,14 +167,53 @@ class TestSuite(unittest.TestCase):
             {"client_ids": [0]},
         ]
     )
-    def test_ok_interests_request(self, arguments):
+    @mock.patch('store.Store.get')
+    def test_ok_interests_request(self, arguments, mocked_get):
+        mocked_get.return_value = json.dumps(['test1', 'test2'])
+
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code, arguments)
         self.assertEqual(len(arguments["client_ids"]), len(response))
-        self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v) for v in response.values()))
+        self.assertTrue(
+            all(v and isinstance(v, list) and all(isinstance(i, str) for i in v) for v in response.values())
+        )
         self.assertEqual(self.context.get("nclients"), len(arguments["client_ids"]))
+
+
+class TestStore(unittest.TestCase):
+    def setUp(self):
+        self.store = Store()
+
+    @mock.patch('redis.StrictRedis.get', return_value='test_value')
+    @mock.patch('redis.StrictRedis.set', return_value='OK')
+    def test_store(self, mocked_set, mocked_get):
+        self.store.set('test_key', 'test_value')
+        value = self.store.get('test_key')
+        self.assertEqual(value, 'test_value')
+
+    def test_absent_key(self):
+        value = self.store.get('absent_key')
+        self.assertIsNone(value)
+
+    def test_cache(self):
+        self.store.cache_set('test_cache_key', 'test_cache_value')
+        value = self.store.cache_get('test_cache_key')
+        self.assertEqual(value, 'test_cache_value')
+
+    def test_cache_absent_key(self):
+        value = self.store.cache_get('absent_key')
+        self.assertIsNone(value)
+
+    def test_cache_ttl(self):
+        self.store.cache_set('test_cache_key_with_ttl', 'test_cache_value_with_ttl', 0.3)
+        time.sleep(0.1)
+        value = self.store.cache_get('test_cache_key_with_ttl')
+        self.assertEqual(value, 'test_cache_value_with_ttl')
+        time.sleep(0.3)
+        value = self.store.cache_get('test_cache_key_with_ttl')
+        self.assertIsNone(value)
 
 
 if __name__ == "__main__":

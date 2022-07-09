@@ -10,6 +10,7 @@ import logging
 import hashlib
 import uuid
 import scoring
+from store import Store
 from optparse import OptionParser
 
 # from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
@@ -336,7 +337,7 @@ def method_handler(request, ctx, store):
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {"method": method_handler}
-    store = None
+    store = Store()
 
     def get_request_id(self, headers):
         return headers.get("HTTP_X_REQUEST_ID", uuid.uuid4().hex)
